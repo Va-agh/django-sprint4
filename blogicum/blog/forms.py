@@ -5,6 +5,8 @@ from .models import Comment
 
 
 class PostForm(forms.ModelForm):
+    """Форма для создания поста"""
+
     class Meta:
         model = Post
         exclude = ('author',)
@@ -14,8 +16,8 @@ class PostForm(forms.ModelForm):
 
 
 class CommentForm(forms.ModelForm):
+    """Форма для создания комментария"""
+
     class Meta:
         model = Comment
         fields = ('text',)
-   
-    
