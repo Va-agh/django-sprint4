@@ -7,7 +7,7 @@ from django.urls import reverse_lazy, reverse
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.shortcuts import get_object_or_404, render
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, HttpResponseNotFound
 from django.db.models import Count
 
 from blog.models import Category, Post, Comment
@@ -34,7 +34,7 @@ class ProfileView(ListView):
     paginate_by = 10
     def get_queryset(self):
         user = get_object_or_404(User, username=self.kwargs['username'])
-        queryset_all = Post.objects.select_related('author').filter(author__username=self.kwargs['username'])
+        queryset_all = Post.objects.select_related('author').filter(author__username=self.kwargs['username']).annotate(comment_count=Count('comment')).order_by('-pub_date')
         if self.request.user == user:
             return queryset_all
         return queryset_all.filter(is_published=True, category__is_published=True, pub_date__lte=timezone.now())
@@ -50,14 +50,19 @@ class PostCreateView(LoginRequiredMixin, CreateView):
     form_class = PostForm
     template_name='blog/create.html'
 
+
     def form_valid(self, form):
         # Присвоить полю author объект пользователя из запроса.
         form.instance.author = self.request.user
         # Продолжить валидацию, описанную в форме.
         return super().form_valid(form)
-    
+
     def get_success_url(self):
-        return reverse_lazy('blog:profile',args=[self.request.user])
+        return reverse_lazy('blog:profile', kwargs={'username': self.request.user.username})
+
+    
+    
+    
 
 
 class PostEditView(OnlyAuthorMixin, UpdateView):
@@ -66,15 +71,24 @@ class PostEditView(OnlyAuthorMixin, UpdateView):
     template_name='blog/create.html'
     pk_url_kwarg = 'post_id'
 
-   
+    def handle_no_permission(self):
+        return HttpResponseRedirect(reverse_lazy('blog:post_detail', kwargs={'post_id': self.kwargs['post_id']}))
+
+
+
+
 class PostDetailView(UserPassesTestMixin, DetailView):
     model = Post
     template_name='blog/detail.html'
     pk_url_kwarg = 'post_id'
-   
+    paginate_by = 10
 
     def test_func(self):
-        approved_query = Post.objects.filter(is_published=True, category__is_published=True, pub_date__lte=timezone.now())
+        approved_query = Post.objects.filter(
+                            is_published=True, 
+                            category__is_published=True, 
+                            pub_date__lte=timezone.now()
+        )
         obj = self.get_object()
         if obj in approved_query:
             return True
@@ -86,6 +100,10 @@ class PostDetailView(UserPassesTestMixin, DetailView):
         context['post'] = Post.objects.get(id=self.kwargs['post_id'])
         context['comments'] = Comment.objects.filter(post__id=self.kwargs['post_id'])
         return context
+
+    def handle_no_permission(self):
+        return HttpResponseNotFound()
+
 
 
 class PostDeleteView(OnlyAuthorMixin, DeleteView):
