@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.db.models import Count
 from django.http import HttpResponseRedirect, HttpResponseNotFound
@@ -66,35 +66,19 @@ class ProfileView(ListView):
         return context
 
 
-class PostCreateView(LoginRequiredMixin, CreateView):
-    """Создание нового поста."""''
+class ProfileEditView(LoginRequiredMixin, UpdateView):
+    """Редактирование профиля."""
 
-    model = Post
-    form_class = PostForm
-    template_name = "blog/create.html"
+    model = User
+    form_class = UserChangeForm
+    template_name = "blog/user.html"
 
-    def form_valid(self, form):
-        form.instance.author = self.request.user
-        return super().form_valid(form)
+    def get_object(self, queryset=None):
+        return self.request.user
 
     def get_success_url(self):
         return reverse_lazy(
             "blog:profile", kwargs={"username": self.request.user.username}
-        )
-
-
-class PostEditView(OnlyAuthorMixin, UpdateView):
-    """Редактирование поста."""
-
-    model = Post
-    form_class = PostForm
-    template_name = "blog/create.html"
-    pk_url_kwarg = "post_id"
-
-    def handle_no_permission(self):
-        return HttpResponseRedirect(
-            reverse_lazy("blog:post_detail", kwargs={
-                         "post_id": self.kwargs["post_id"]})
         )
 
 
@@ -127,6 +111,38 @@ class PostDetailView(UserPassesTestMixin, DetailView):
 
     def handle_no_permission(self):
         return HttpResponseNotFound()
+
+
+class PostCreateView(LoginRequiredMixin, CreateView):
+    """Создание нового поста."""''
+
+    model = Post
+    form_class = PostForm
+    template_name = "blog/create.html"
+
+    def form_valid(self, form):
+        form.instance.author = self.request.user
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse_lazy(
+            "blog:profile", kwargs={"username": self.request.user.username}
+        )
+
+
+class PostEditView(OnlyAuthorMixin, UpdateView):
+    """Редактирование поста."""
+
+    model = Post
+    form_class = PostForm
+    template_name = "blog/create.html"
+    pk_url_kwarg = "post_id"
+
+    def handle_no_permission(self):
+        return HttpResponseRedirect(
+            reverse_lazy("blog:post_detail", kwargs={
+                         "post_id": self.kwargs["post_id"]})
+        )
 
 
 class PostDeleteView(OnlyAuthorMixin, DeleteView):
