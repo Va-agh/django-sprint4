@@ -5,6 +5,7 @@ from django.urls import reverse
 User = get_user_model()
 
 MAX_LENGTH = 256
+CHAR_LIMIT_COMMENT = 5
 
 
 class PublishedCreated(models.Model):
@@ -108,19 +109,26 @@ class Post(PublishedCreated):
         return reverse("blog:post_detail", kwargs={"post_id": self.pk})
 
 
-class Comment(PublishedCreated):
+class Comment(models.Model):
     """Модель для комментариев к публикации"""
 
     text = models.TextField("Текст комментария")
+    created_at = models.DateTimeField(
+        auto_now_add=True, verbose_name="Добавлено")
     post = models.ForeignKey(
         Post,
         on_delete=models.CASCADE,
-        related_name="comment",
+        related_name="comments",
     )
     author = models.ForeignKey(User, on_delete=models.CASCADE)
 
     class Meta:
+        verbose_name = "комментарий"
+        verbose_name_plural = "Комментарии"
         ordering = ("created_at",)
+
+    def __str__(self):
+        return self.text[:CHAR_LIMIT_COMMENT]
 
     def get_absolute_url(self):
         return reverse("blog:post_detail", kwargs={"post_id": self.post.pk})
