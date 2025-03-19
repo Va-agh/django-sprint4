@@ -35,8 +35,6 @@ def organize_queryset(filter=False, order=False):
             "-pub_date"
         )
     return queryset
-    #псевдокод
-    #get_posts(filter=self.request.user != self.get_profile(), ...) 
 
 
 class OnlyAuthorMixin(UserPassesTestMixin):
@@ -77,11 +75,12 @@ class ProfileView(ListView):
 
     def get_queryset(self):
         user = self.get_user()
-        if self.request.user == user:
-            queryset = organize_queryset(order=True)
-        else:
-            queryset = organize_queryset(filter=True, order=True)
-        return queryset.filter(author=user)
+        return organize_queryset(
+            self.request.user != user,
+            order=True
+        ).filter(
+            author=user
+        )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -213,6 +212,7 @@ class CommentDeleteView(LoginRequiredMixin, OnlyAuthorMixin, DeleteView):
             id=self.kwargs["comment_id"],
             post__id=self.kwargs["post_id"]
         )
+
 
 class IndexView(ListView):
     """Выводит список публикаций на главную."""
