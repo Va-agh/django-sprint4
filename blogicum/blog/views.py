@@ -35,6 +35,8 @@ def organize_queryset(filter=False, order=False):
             "-pub_date"
         )
     return queryset
+    #псевдокод
+    #get_posts(filter=self.request.user != self.get_profile(), ...) 
 
 
 class OnlyAuthorMixin(UserPassesTestMixin):
@@ -147,7 +149,7 @@ class PostCreateView(LoginRequiredMixin, CreateView):
         )
 
 
-class PostEditView(OnlyAuthorMixin, LoginRequiredMixin, UpdateView):
+class PostEditView(LoginRequiredMixin, OnlyAuthorMixin, UpdateView):
     """Редактирование поста."""
 
     model = Post
@@ -182,7 +184,7 @@ class CommentAddView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class CommentEditView(OnlyAuthorMixin, UpdateView):
+class CommentEditView(LoginRequiredMixin, OnlyAuthorMixin, UpdateView):
     """Редактирование комментария."""
 
     model = Comment
@@ -191,10 +193,14 @@ class CommentEditView(OnlyAuthorMixin, UpdateView):
     template_name = "blog/create.html"
 
     def get_object(self):
-        return get_object_or_404(Comment, id=self.kwargs["comment_id"])
+        return get_object_or_404(
+            Comment,
+            id=self.kwargs["comment_id"],
+            post__id=self.kwargs["post_id"]
+        )
 
 
-class CommentDeleteView(OnlyAuthorMixin, DeleteView):
+class CommentDeleteView(LoginRequiredMixin, OnlyAuthorMixin, DeleteView):
     """Удаление комментария."""
 
     model = Comment
@@ -202,8 +208,11 @@ class CommentDeleteView(OnlyAuthorMixin, DeleteView):
     template_name = "blog/create.html"
 
     def get_object(self):
-        return get_object_or_404(Comment, id=self.kwargs["comment_id"])
-
+        return get_object_or_404(
+            Comment,
+            id=self.kwargs["comment_id"],
+            post__id=self.kwargs["post_id"]
+        )
 
 class IndexView(ListView):
     """Выводит список публикаций на главную."""
@@ -226,7 +235,7 @@ class CategoryView(ListView):
         )
 
     def get_queryset(self):
-        category = self.get_category()  # выбрасывает 404?
+        category = self.get_category()
         return organize_queryset(
             filter=True, order=True
         ).filter(

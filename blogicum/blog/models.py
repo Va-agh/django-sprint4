@@ -120,7 +120,11 @@ class Comment(models.Model):
         on_delete=models.CASCADE,
         related_name="comments",
     )
-    author = models.ForeignKey(User, on_delete=models.CASCADE)
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="comments"
+    )
 
     class Meta:
         verbose_name = "комментарий"
